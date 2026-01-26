@@ -37,6 +37,17 @@ async function initDb() {
       )
     `);
 
+    // Create admins table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create bookings table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS bookings (
@@ -300,6 +311,191 @@ app.get('/api/users', async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==================== ADMIN ENDPOINTS ====================
+
+// Admin Sign Up endpoint
+app.post('/api/admin/signup', async (req, res) => {
+  try {
+    const { username, password, confirmPassword, email } = req.body;
+
+    if (!username || !password || !confirmPassword || !email) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await pool.query(
+      'INSERT INTO admins (username, password, email) VALUES (?, ?, ?)',
+      [username, hashedPassword, email]
+    );
+
+    res.status(201).json({ message: 'Admin account created successfully' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Admin username already exists' });
+    }
+    console.error('Admin sign up error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin Sign In endpoint
+app.post('/api/admin/signin', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
+    const admin = rows[0];
+
+    if (!admin) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const validPassword = await bcrypt.compare(password, admin.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { adminId: admin.id, username: admin.username, role: 'admin' },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token, username: admin.username, role: 'admin' });
+  } catch (error) {
+    console.error('Admin sign in error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin authentication middleware
+const authenticateAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    req.admin = user;
+    next();
+  });
+};
+
+// Get all bookings for admin (with user info)
+app.get('/api/admin/bookings', authenticateAdmin, async (req, res) => {
+  try {
+    const [bookings] = await pool.query(
+      `SELECT b.id, b.service_type, b.vehicle_type, b.vehicle_model, b.preferred_date, 
+              b.preferred_time, b.description, b.status, b.created_at, b.updated_at,
+              u.username, u.mobile_number
+       FROM bookings b
+       JOIN users u ON b.user_id = u.id
+       ORDER BY b.created_at DESC`
+    );
+
+    // Format the response
+    const formattedBookings = bookings.map(booking => ({
+      id: booking.id,
+      serviceType: booking.service_type,
+      vehicleType: booking.vehicle_type,
+      vehicleModel: booking.vehicle_model,
+      date: booking.preferred_date,
+      time: booking.preferred_time,
+      description: booking.description,
+      status: booking.status,
+      createdAt: booking.created_at,
+      updatedAt: booking.updated_at,
+      username: booking.username,
+      mobileNumber: booking.mobile_number
+    }));
+
+    res.json(formattedBookings);
+  } catch (error) {
+    console.error('Admin get bookings error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get booking statistics for admin
+app.get('/api/admin/bookings/stats', authenticateAdmin, async (req, res) => {
+  try {
+    const [stats] = await pool.query(
+      `SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'Confirmed' THEN 1 ELSE 0 END) as confirmed,
+        SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled
+       FROM bookings`
+    );
+
+    res.json(stats[0]);
+  } catch (error) {
+    console.error('Admin get stats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin update booking status (confirm pending, complete confirmed)
+app.put('/api/admin/bookings/:id/status', authenticateAdmin, async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const { status } = req.body;
+
+    if (!status || !['Pending', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Check if booking exists
+    const [bookings] = await pool.query(
+      'SELECT id, status FROM bookings WHERE id = ?',
+      [bookingId]
+    );
+
+    if (bookings.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const currentStatus = bookings[0].status;
+
+    // Validate status transitions
+    if (status === 'Confirmed' && currentStatus !== 'Pending') {
+      return res.status(400).json({ error: 'Only Pending bookings can be confirmed' });
+    }
+
+    if (status === 'Completed' && currentStatus !== 'Confirmed') {
+      return res.status(400).json({ error: 'Only Confirmed bookings can be marked as completed' });
+    }
+
+    await pool.query(
+      'UPDATE bookings SET status = ? WHERE id = ?',
+      [status, bookingId]
+    );
+
+    res.json({ message: 'Booking status updated successfully' });
+  } catch (error) {
+    console.error('Admin update booking error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
