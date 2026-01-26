@@ -1,5 +1,60 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+
+// Animated Counter Component
+const AnimatedCounter = ({ end, duration = 2000, suffix = '' }) => {
+    const [count, setCount] = useState(0);
+    const [isVisible, setIsVisible] = useState(false);
+    const counterRef = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting && !isVisible) {
+                    setIsVisible(true);
+                }
+            },
+            { threshold: 0.3 }
+        );
+
+        if (counterRef.current) {
+            observer.observe(counterRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [isVisible]);
+
+    useEffect(() => {
+        if (!isVisible) return;
+
+        let startTime;
+        const startValue = 0;
+        const endValue = end;
+
+        const animate = (currentTime) => {
+            if (!startTime) startTime = currentTime;
+            const progress = Math.min((currentTime - startTime) / duration, 1);
+            
+            // Easing function for smooth animation
+            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+            const currentCount = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
+            
+            setCount(currentCount);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }, [isVisible, end, duration]);
+
+    return (
+        <span ref={counterRef}>
+            {count}{suffix}
+        </span>
+    );
+};
 
 const LandingPage = () => {
     return (
@@ -74,15 +129,21 @@ const LandingPage = () => {
                             <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 border border-white border-opacity-20">
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="bg-white bg-opacity-20 rounded-xl p-4 text-center card-hover">
-                                        <div className="text-3xl font-bold text-white">500+</div>
+                                        <div className="text-3xl font-bold text-white">
+                                            <AnimatedCounter end={500} duration={2000} suffix="+" />
+                                        </div>
                                         <div className="text-indigo-200 text-sm">Happy Customers</div>
                                     </div>
                                     <div className="bg-white bg-opacity-20 rounded-xl p-4 text-center card-hover">
-                                        <div className="text-3xl font-bold text-white">50+</div>
+                                        <div className="text-3xl font-bold text-white">
+                                            <AnimatedCounter end={50} duration={1800} suffix="+" />
+                                        </div>
                                         <div className="text-indigo-200 text-sm">Expert Technicians</div>
                                     </div>
                                     <div className="bg-white bg-opacity-20 rounded-xl p-4 text-center card-hover">
-                                        <div className="text-3xl font-bold text-white">10+</div>
+                                        <div className="text-3xl font-bold text-white">
+                                            <AnimatedCounter end={10} duration={1500} suffix="+" />
+                                        </div>
                                         <div className="text-indigo-200 text-sm">Service Types</div>
                                     </div>
                                     <div className="bg-white bg-opacity-20 rounded-xl p-4 text-center card-hover">
@@ -141,7 +202,17 @@ const LandingPage = () => {
             <div className="py-20 bg-gradient-to-br from-gray-50 to-indigo-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
-                        <div className="animate-fade-in">
+                        {/* Image Section */}
+                        <div className="order-2 lg:order-1 mt-12 lg:mt-0 animate-fade-in">
+                            <img 
+                                src="/car-service.png" 
+                                alt="Car Service - Professional mechanic with checklist" 
+                                className="w-full h-auto scale-110 lg:scale-125 mr-auto -ml-8 lg:-ml-16 drop-shadow-xl hover:scale-[1.15] lg:hover:scale-[1.30] transition-transform duration-500"
+                            />
+                        </div>
+                        
+                        {/* Content Section */}
+                        <div className="order-1 lg:order-2 animate-fade-in">
                             <h2 className="text-base text-indigo-600 font-semibold tracking-wide uppercase">Why Choose Us</h2>
                             <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
                                 Trusted by Car Owners Everywhere
@@ -162,49 +233,18 @@ const LandingPage = () => {
                                         style={{ animationDelay: `${index * 150}ms` }}
                                     >
                                         <div className="flex-shrink-0">
-                                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3">
-                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:bg-indigo-600 group-hover:scale-110">
+                                                <svg className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={feature.icon}></path>
                                                 </svg>
                                             </div>
                                         </div>
                                         <div className="ml-4">
-                                            <h4 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{feature.title}</h4>
+                                            <h4 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{feature.title}</h4>
                                             <p className="mt-1 text-gray-500">{feature.desc}</p>
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-                        <div className="mt-12 lg:mt-0 animate-fade-in" style={{ animationDelay: '300ms' }}>
-                            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 card-hover">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6">Book Your Service Today</h3>
-                                <div className="space-y-4">
-                                    {[
-                                        { num: 1, text: "Create your free account" },
-                                        { num: 2, text: "Select your service type" },
-                                        { num: 3, text: "Choose date & time" },
-                                        { num: 4, text: "Get your car serviced!" },
-                                    ].map((step, index) => (
-                                        <div 
-                                            key={index} 
-                                            className="flex items-center p-4 bg-indigo-50 rounded-xl transition-all duration-300 hover:bg-indigo-100 hover:translate-x-2"
-                                            style={{ animationDelay: `${(index + 1) * 100}ms` }}
-                                        >
-                                            <div className="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4 transition-transform hover:scale-110">{step.num}</div>
-                                            <span className="text-gray-700">{step.text}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Link
-                                    to="/signup"
-                                    className="mt-6 w-full inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all duration-200 btn-press shadow-lg hover:shadow-xl group"
-                                >
-                                    Get Started Free
-                                    <svg className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                                    </svg>
-                                </Link>
                             </div>
                         </div>
                     </div>
