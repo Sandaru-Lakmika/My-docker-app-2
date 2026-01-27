@@ -108,7 +108,6 @@
     - name: Wait for containers to be healthy
       wait_for:
         timeout: 60
-      delegate_to: localhost
 
     - name: Check running containers
       command: docker ps
