@@ -1,0 +1,51 @@
+# Add environment variables to .gitignore
+.env
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+frontend/build/
+backend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfvars.backup
+infra/terraform/.terraform.lock.hcl
+infra/terraform/crash.log
+
+# Ansible
+infra/ansible/*.retry
+*.retry
+
+# Jenkins
+*.war
+
+# SSH Keys
+*.pem
+*.key
+!*.pub
+
+# Temporary files
+ec2_ip.txt
+.git/commit-id

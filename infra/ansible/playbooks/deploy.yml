@@ -1,0 +1,152 @@
+---
+# Main Ansible Playbook for Deploying Docker Application
+- name: Deploy Docker Application to EC2
+  hosts: webservers
+  become: yes
+  gather_facts: yes
+
+  vars:
+    app_name: "{{ app_name | default('my-docker-app2') }}"
+    dockerhub_username: "{{ dockerhub_username }}"
+    dockerhub_password: "{{ dockerhub_password }}"
+    image_tag: "{{ image_tag | default('latest') }}"
+    app_directory: "/opt/app"
+
+    # Database configuration
+    mysql_root_password: "rootpassword"
+    mysql_database: "carservice"
+    jwt_secret: "your_jwt_secret_change_in_production"
+
+  tasks:
+    - name: Print deployment information
+      debug:
+        msg: "Deploying {{ app_name }} with tag {{ image_tag }} from {{ dockerhub_username }}"
+
+    - name: Wait for cloud-init to complete
+      command: cloud-init status --wait
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Ensure Docker is installed and running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Install Docker Compose (if not installed)
+      get_url:
+        url: "https://github.com/docker/compose/releases/latest/download/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+      ignore_errors: yes
+
+    - name: Create application directory
+      file:
+        path: "{{ app_directory }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Login to DockerHub
+      docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+        reauthorize: yes
+
+    - name: Stop existing containers
+      shell: |
+        docker-compose down || true
+        docker stop $(docker ps -aq) 2>/dev/null || true
+      args:
+        chdir: "{{ app_directory }}"
+      ignore_errors: yes
+
+    - name: Remove old containers and images
+      shell: |
+        docker rm $(docker ps -aq) 2>/dev/null || true
+        docker system prune -f
+      ignore_errors: yes
+
+    - name: Create docker-compose.yml from template
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ app_directory }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Pull latest Docker images
+      docker_image:
+        name: "{{ dockerhub_username }}/{{ item }}"
+        tag: "{{ image_tag }}"
+        source: pull
+        force_source: yes
+      loop:
+        - "{{ app_name }}-backend"
+        - "{{ app_name }}-frontend"
+
+    - name: Start application with Docker Compose
+      shell: |
+        docker-compose up -d
+      args:
+        chdir: "{{ app_directory }}"
+      environment:
+        COMPOSE_HTTP_TIMEOUT: "200"
+
+    - name: Wait for containers to be healthy
+      wait_for:
+        timeout: 60
+      delegate_to: localhost
+
+    - name: Check running containers
+      command: docker ps
+      register: docker_ps_output
+      changed_when: false
+
+    - name: Display running containers
+      debug:
+        var: docker_ps_output.stdout_lines
+
+    - name: Verify frontend is responding
+      uri:
+        url: "http://localhost:3000"
+        status_code: [200, 301, 302]
+        timeout: 10
+      retries: 5
+      delay: 5
+      register: frontend_check
+      ignore_errors: yes
+
+    - name: Verify backend is responding
+      uri:
+        url: "http://localhost:5000/health"
+        status_code: [200, 404]
+        timeout: 10
+      retries: 5
+      delay: 5
+      register: backend_check
+      ignore_errors: yes
+
+    - name: Deployment summary
+      debug:
+        msg:
+          - "Deployment completed!"
+          - "Frontend URL: http://{{ ansible_default_ipv4.address }}:3000"
+          - "Backend URL: http://{{ ansible_default_ipv4.address }}:5000"
+          - "Image Tag: {{ image_tag }}"
+
+    - name: Logout from DockerHub
+      docker_login:
+        state: absent

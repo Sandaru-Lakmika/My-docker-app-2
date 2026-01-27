@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: {{ dockerhub_username }}/{{ app_name }}-frontend:{{ image_tag }}
+    container_name: frontend_c
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://{{ ansible_default_ipv4.address }}:5000
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  backend:
+    image: {{ dockerhub_username }}/{{ app_name }}-backend:{{ image_tag }}
+    container_name: backend_c
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql_db
+      - DB_USER=root
+      - DB_PASSWORD={{ mysql_root_password }}
+      - DB_NAME={{ mysql_database }}
+      - DB_PORT=3306
+      - JWT_SECRET={{ jwt_secret }}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: {{ mysql_root_password }}
+      MYSQL_DATABASE: {{ mysql_database }}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p{{ mysql_root_password }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
