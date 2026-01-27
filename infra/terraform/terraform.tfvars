@@ -2,7 +2,7 @@
 aws_region = "eu-north-1"
 
 # EC2 Instance Type
-instance_type = "t2.medium"
+instance_type = "t3.medium"
 
 # SSH Key Name (create this in AWS console first)
 key_name = "devops-key"
