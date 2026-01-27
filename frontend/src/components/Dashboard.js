@@ -53,8 +53,8 @@ const Dashboard = () => {
 
       // Load bookings and stats in parallel
       const [bookingsResponse, statsResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/bookings', config),
-        axios.get('http://localhost:5000/api/bookings/stats', config)
+        axios.get('/api/bookings', config),
+        axios.get('/api/bookings/stats', config)
       ]);
 
       setBookings(bookingsResponse.data);
@@ -101,7 +101,7 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      await axios.post('http://localhost:5000/api/bookings', {
+      await axios.post('/api/bookings', {
         serviceType: bookingData.serviceType,
         vehicleType: bookingData.vehicleType,
         vehicleModel: bookingData.vehicleModel,
@@ -159,7 +159,7 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      await axios.delete(`http://localhost:5000/api/bookings/${bookingId}`, config);
+      await axios.delete(`/api/bookings/${bookingId}`, config);
       
       // Reload dashboard data
       await loadDashboardData();

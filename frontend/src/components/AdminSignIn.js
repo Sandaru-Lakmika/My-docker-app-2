@@ -16,7 +16,7 @@ const AdminSignIn = () => {
         setLoading(true);
         
         try {
-            const response = await axios.post('http://localhost:5000/api/admin/signin', {
+            const response = await axios.post('/api/admin/signin', {
                 username,
                 password
             });

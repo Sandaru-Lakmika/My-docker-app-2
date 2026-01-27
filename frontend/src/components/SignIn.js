@@ -15,7 +15,7 @@ const SignIn = () => {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.post('http://localhost:5000/api/signin', {
+            const response = await axios.post('/api/signin', {
                 username,
                 password
             });

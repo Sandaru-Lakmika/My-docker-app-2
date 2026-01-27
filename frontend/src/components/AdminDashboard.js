@@ -22,8 +22,8 @@ const AdminDashboard = () => {
 
       // Load bookings and stats in parallel
       const [bookingsResponse, statsResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/admin/bookings', config),
-        axios.get('http://localhost:5000/api/admin/bookings/stats', config)
+        axios.get('/api/admin/bookings', config),
+        axios.get('/api/admin/bookings/stats', config)
       ]);
 
       setBookings(bookingsResponse.data);
