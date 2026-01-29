@@ -6,7 +6,8 @@ output "instance_id" {
 
 output "ec2_public_ip" {
   description = "Public IP address of the EC2 instance"
-  value       = aws_eip.app_eip.public_ip
+  # Use the instance public IP when an Elastic IP resource is not present
+  value       = try(aws_eip.app_eip.public_ip, aws_instance.app_server.public_ip)
 }
 
 output "ec2_public_dns" {
