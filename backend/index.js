@@ -109,7 +109,7 @@ app.post('/api/signup', async (req, res) => {
 });
 
 // Sign In endpoint
-app.post('/api/signin', async (req, res) => {
+app.post('/http://16.171.75.101:5000/http://16.171.75.101:5000/api/signin', async (req, res) => {
   try {
     const { username, password } = req.body;
 
