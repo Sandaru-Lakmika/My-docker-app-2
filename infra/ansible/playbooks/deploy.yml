@@ -138,6 +138,32 @@
       register: backend_check
       ignore_errors: yes
 
+    - name: Verify database schema initialization
+      shell: |
+        docker exec backend_c node -e "const { initDb } = require('./index'); initDb();"
+      args:
+        chdir: "{{ app_directory }}"
+      ignore_errors: yes
+      register: db_init_output
+
+    - name: Display database initialization output
+      debug:
+        var: db_init_output.stdout_lines
+
+    - name: Verify backend database connectivity
+      uri:
+        url: "http://localhost:5000/health"
+        status_code: [200, 500]
+        timeout: 10
+      retries: 5
+      delay: 5
+      register: backend_health_check
+      ignore_errors: yes
+
+    - name: Display backend health check results
+      debug:
+        var: backend_health_check.stdout_lines
+
     - name: Deployment summary
       debug:
         msg:

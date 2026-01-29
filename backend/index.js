@@ -75,6 +75,9 @@ async function initDb() {
 
 initDb();
 
+// Export initDb function
+module.exports = { initDb };
+
 // Sign Up endpoint
 app.post('/api/signup', async (req, res) => {
   try {
@@ -497,6 +500,21 @@ app.put('/api/admin/bookings/:id/status', authenticateAdmin, async (req, res) =>
   } catch (error) {
     console.error('Admin update booking error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+
+    res.status(200).json({ status: 'OK', message: 'Backend is healthy and connected to the database' });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ status: 'ERROR', message: 'Database connection failed' });
   }
 });
 
