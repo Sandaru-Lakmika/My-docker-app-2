@@ -1,0 +1,27 @@
+# Ignore node_modules and logs
+node_modules
+*.log
+
+# Ignore build artifacts
+dist
+build
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore temporary files
+*.tmp
+*.swp
+
+# Ignore Docker-related files
+docker-compose.override.yml
+Dockerfile*
+
+# Ignore frontend build outputs
+frontend/public
+frontend/src
+
+# Ignore backend logs and temporary files
+backend/logs
+backend/tmp
