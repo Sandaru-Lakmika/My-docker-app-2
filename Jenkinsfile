@@ -13,15 +13,15 @@ pipeline {
         }
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t my-docker-app2-backend ./backend'
-                sh 'docker build -t my-docker-app2-frontend ./frontend'
+                sh 'docker build -t sandaru13/my-docker-app2-backend ./backend'
+                sh 'docker build -t sandaru13/my-docker-app2-frontend ./frontend'
             }
         }
         stage('Push Docker Images') {
             steps {
                 sh 'docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW'
-                sh 'docker push my-docker-app2-backend'
-                sh 'docker push my-docker-app2-frontend'
+                sh 'docker push sandaru13/my-docker-app2-backend'
+                sh 'docker push sandaru13/my-docker-app2-frontend'
             }
         }
         stage('Provision Infrastructure') {
