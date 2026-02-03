@@ -18,8 +18,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
-  
-  # Credentials will be provided via environment variables:
-  # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  region     = "us-east-1"
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
 }

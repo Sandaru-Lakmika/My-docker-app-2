@@ -40,3 +40,11 @@ variable "allowed_http_cidr" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
+
+variable "aws_access_key" {
+  description = "AWS Access Key"
+}
+
+variable "aws_secret_key" {
+  description = "AWS Secret Key"
+}

@@ -29,7 +29,9 @@ pipeline {
                 sh '''
                 cd infra/terraform
                 terraform init
-                terraform apply -auto-approve
+                terraform apply -auto-approve \
+                  -var "aws_access_key=$AWS_CREDENTIALS_USR" \
+                  -var "aws_secret_key=$AWS_CREDENTIALS_PSW"
                 '''
             }
         }
