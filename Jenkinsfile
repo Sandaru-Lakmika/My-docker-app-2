@@ -2,8 +2,9 @@ pipeline {
     agent any
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        AWS_CREDENTIALS = credentials('aws-credentials')
         EC2_SSH_KEY = credentials('ec2-ssh-key')
+        // Fixed EC2 IP - your existing running instance
+        EC2_IP = '16.171.75.101'
     }
     stages {
         stage('Checkout') {
@@ -24,23 +25,12 @@ pipeline {
                 sh 'docker push sandaru13/my-docker-app2-frontend'
             }
         }
-        stage('Provision Infrastructure') {
-            steps {
-                sh '''
-                cd infra/terraform
-                terraform init
-                terraform apply -auto-approve \
-                  -var "aws_access_key=$AWS_CREDENTIALS_USR" \
-                  -var "aws_secret_key=$AWS_CREDENTIALS_PSW"
-                '''
-            }
-        }
+        // REMOVED: Provision Infrastructure stage - we use existing EC2 instance!
         stage('Deploy Application') {
             steps {
                 sh '''
-                EC2_IP=$(terraform -chdir=infra/terraform output -raw ec2_public_ip)
                 echo "[webservers]" > infra/ansible/inventory/hosts
-                echo "$EC2_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/devops-key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> infra/ansible/inventory/hosts
+                echo "${EC2_IP} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/devops-key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> infra/ansible/inventory/hosts
                 ansible-playbook -i infra/ansible/inventory/hosts infra/ansible/playbooks/deploy.yml \
                   -e "dockerhub_username=$DOCKERHUB_CREDENTIALS_USR" \
                   -e "dockerhub_password=$DOCKERHUB_CREDENTIALS_PSW" \
@@ -51,7 +41,7 @@ pipeline {
         }
         stage('Verify Deployment') {
             steps {
-                sh 'curl http://$(terraform -chdir=infra/terraform output -raw ec2_public_ip):3000'
+                sh 'curl http://${EC2_IP}:3000'
             }
         }
     }
