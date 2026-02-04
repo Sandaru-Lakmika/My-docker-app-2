@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        EC2_SSH_KEY = credentials('ec2-ssh-key')
         // Fixed EC2 IP - your existing running instance
         EC2_IP = '16.171.75.101'
     }
@@ -28,15 +27,17 @@ pipeline {
         // REMOVED: Provision Infrastructure stage - we use existing EC2 instance!
         stage('Deploy Application') {
             steps {
-                sh '''
-                echo "[webservers]" > infra/ansible/inventory/hosts
-                echo "${EC2_IP} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/devops-key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> infra/ansible/inventory/hosts
-                ansible-playbook -i infra/ansible/inventory/hosts infra/ansible/playbooks/deploy.yml \
-                  -e "dockerhub_username=$DOCKERHUB_CREDENTIALS_USR" \
-                  -e "dockerhub_password=$DOCKERHUB_CREDENTIALS_PSW" \
-                  -e "app_name=my-docker-app2" \
-                  -e "image_tag=latest"
-                '''
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY_FILE')]) {
+                    sh '''
+                    echo "[webservers]" > infra/ansible/inventory/hosts
+                    echo "${EC2_IP} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY_FILE} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> infra/ansible/inventory/hosts
+                    ansible-playbook -i infra/ansible/inventory/hosts infra/ansible/playbooks/deploy.yml \
+                      -e "dockerhub_username=$DOCKERHUB_CREDENTIALS_USR" \
+                      -e "dockerhub_password=$DOCKERHUB_CREDENTIALS_PSW" \
+                      -e "app_name=my-docker-app2" \
+                      -e "image_tag=latest"
+                    '''
+                }
             }
         }
         stage('Verify Deployment') {
