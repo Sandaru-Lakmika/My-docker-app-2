@@ -1,6 +1,6 @@
 # Security Group for EC2 Instance
 resource "aws_security_group" "app_sg" {
-  name        = "${var.project_name}-sg-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+  name_prefix = "my-docker-app2-sg-"
   description = "Security group for ${var.project_name} application"
 
   # SSH access

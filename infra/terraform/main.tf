@@ -22,3 +22,7 @@ provider "aws" {
   access_key = var.aws_access_key
   secret_key = var.aws_secret_key
 }
+
+data "aws_instance" "existing_instance" {
+  instance_id = "i-0d8e67243526a67b3" // Replace with the actual instance ID
+}
