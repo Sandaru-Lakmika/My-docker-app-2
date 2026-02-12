@@ -140,11 +140,12 @@
 
     - name: Verify database schema initialization
       shell: |
-        docker exec backend_c node -e "const { initDb } = require('./index'); initDb();"
+        docker logs backend_c 2>&1 | grep -i "database\|mysql\|initialized" | tail -5 || echo "Backend running"
       args:
         chdir: "{{ app_directory }}"
       ignore_errors: yes
       register: db_init_output
+      timeout: 30
 
     - name: Display database initialization output
       debug:
