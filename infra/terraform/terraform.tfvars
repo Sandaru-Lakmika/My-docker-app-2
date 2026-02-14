@@ -4,7 +4,7 @@ aws_region = "eu-north-1"
 # EC2 Instance Type
 instance_type = "t3.small"
 
-# SSH Key Name (create this in AWS console first)
+# SSH Key Name
 key_name = "devops-key"
 
 # Project Configuration
