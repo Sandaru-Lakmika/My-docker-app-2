@@ -135,3 +135,24 @@ docker-compose up --build
 
 **EC5207 - DevOps**  
 5th Semester Project
+
+
+
+
+
+# Someone clones your repo
+git clone <your-repo>
+cd my-docker-app2
+
+# They run your scripts to setup their machine
+chmod +x scripts/*.sh
+./scripts/install-devops-tools.sh    # Installs Docker, Terraform, Ansible, Jenkins, etc.
+./scripts/setup-aws.sh               # Configures their AWS credentials
+./scripts/setup-jenkins.sh           # Sets up their local Jenkins
+./scripts/verify-setup.sh            # Verifies everything works
+
+# Now they can:
+docker-compose up --build            # Run app locally
+terraform plan                       # Test infrastructure changes
+ansible-playbook ...                 # Test deployments
+# Test webhook automation Wed Mar  4 02:01:44 +0530 2026
